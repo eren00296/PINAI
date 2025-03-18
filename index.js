@@ -25,17 +25,12 @@ async function loadAccounts() {
     }
 
     return tokens.map((token, index) => {
-        const proxy = proxies[index];
-        const [protocol, authHost] = proxy.split('://');
-        const [auth, host] = authHost.split('@');
-        const agent = new HttpsProxyAgent(`${protocol}://${host}`);
-
+        const proxy = proxies[index].startsWith('http') ? proxies[index] : `http://${proxies[index]}`;
         return {
             token,
             proxy,
             userAgent: new UserAgent().toString(),
-            agent,
-            authHeader: 'Basic ' + Buffer.from(auth).toString('base64')
+            httpsAgent: new HttpsProxyAgent(proxy)
         };
     });
 }
@@ -53,8 +48,7 @@ async function checkHome(account) {
                 'authorization': `Bearer ${account.token}`,
                 'User-Agent': account.userAgent
             },
-            httpsAgent: account.agent,
-            proxy: false
+            httpsAgent: account.httpsAgent
         });
         console.log(`👤 Account (Proxy: ${account.proxy}): ${res.data.user_info?.name || 'N/A'}`);
     } catch (e) {
@@ -70,15 +64,12 @@ async function getRandomTasks(account) {
                 'authorization': `Bearer ${account.token}`,
                 'User-Agent': account.userAgent
             },
-            httpsAgent: account.agent,
-            proxy: false
+            httpsAgent: account.httpsAgent
         });
-
-        console.log(`📋 Full API Response (${account.proxy}):`, JSON.stringify(res.data, null, 2));
-
+        console.log(`📋 Tasks fetched for ${account.proxy}`);
         return res.data;
     } catch (e) {
-        console.error(`📋 Tasks: Failed for ${account.proxy} - ${e.message}`);
+        console.error(`📋 Tasks: Failed for ${account.proxy}`);
         return null;
     }
 }
@@ -91,8 +82,7 @@ async function claimTask(account, taskId) {
                 'authorization': `Bearer ${account.token}`,
                 'User-Agent': account.userAgent
             },
-            httpsAgent: account.agent,
-            proxy: false
+            httpsAgent: account.httpsAgent
         });
         console.log(`✅ Task ${taskId} claimed for ${account.proxy}`);
     } catch (e) {
