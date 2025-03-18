@@ -1,125 +1,125 @@
 const axios = require('axios');
 const fs = require('fs').promises;
 const HttpsProxyAgent = require('https-proxy-agent');
-const path = require('path');
+const UserAgent = require('user-agents');
 
 const BASE_URL = 'https://prod-api.pinai.tech';
 
-// Read multiple lines from a file
-async function readLines(filename) {
+async function readLinesFromFile(filename) {
     try {
         const data = await fs.readFile(filename, 'utf8');
         return data.split('\n').map(line => line.trim()).filter(line => line);
     } catch (e) {
         console.error(`❌ Error reading ${filename}:`, e.message);
-        return [];
+        process.exit(1);
     }
 }
 
-// Log to file and console
-async function logToFile(accountIndex, message) {
-    const logDir = 'logs';
-    await fs.mkdir(logDir, { recursive: true });
+async function loadAccounts() {
+    const tokens = await readLinesFromFile('token.txt');
+    const proxies = await readLinesFromFile('proxy.txt');
 
-    const logFile = path.join(logDir, `account_${accountIndex + 1}.log`);
-    const timestamp = new Date().toISOString();
-    const logMessage = `[${timestamp}] ${message}\n`;
-
-    await fs.appendFile(logFile, logMessage);
-    console.log(logMessage.trim());
-}
-
-// Random delay between min and max seconds
-const randomDelay = (min, max) => Math.floor(Math.random() * (max - min + 1) + min) * 1000;
-
-// Create axios instance with proxy
-async function createAxiosInstance(token, proxy, accountIndex) {
-    let axiosConfig = {
-        headers: {
-            'accept': 'application/json',
-            'accept-language': 'en-US,en;q=0.9',
-            'lang': 'en-US',
-            'content-type': 'application/json',
-            'authorization': `Bearer ${token}`
-        }
-    };
-
-    if (proxy) {
-        await logToFile(accountIndex, `🆔 Account ${accountIndex + 1} → Proxy: ${proxy}`);
-        axiosConfig.httpsAgent = new HttpsProxyAgent(proxy);
-    } else {
-        await logToFile(accountIndex, `⚠️ No proxy assigned for Account ${accountIndex + 1}, skipping...`);
-        return null;
-    }
-
-    return axios.create(axiosConfig);
-}
-
-// Fetch account details
-async function checkHome(axiosInstance, accountIndex) {
-    try {
-        const res = await axiosInstance.get(`${BASE_URL}/home`);
-        const data = res.data;
-
-        const logMessage = `
-===== Account ${accountIndex + 1} Profile Info =====
-👤 Name: ${data.user_info?.name || 'N/A'}
-✅ Today Check-in: ${data.is_today_checkin ? 'Yes' : 'No'}
-📊 Current Level: ${data.current_model?.current_level || 'N/A'}
-💎 Pin Points: ${data.pin_points || 'N/A'}
-        `;
-        await logToFile(accountIndex, logMessage);
-    } catch (e) {
-        await logToFile(accountIndex, `❌ Account ${accountIndex + 1}: Failed to fetch profile info - ${e.message}`);
-    }
-}
-
-// Run bot for an account
-async function runAccount(accountIndex, token, proxy) {
-    await logToFile(accountIndex, `🚀 Starting bot for Account ${accountIndex + 1}`);
-
-    const axiosInstance = await createAxiosInstance(token, proxy, accountIndex);
-    if (!axiosInstance) return;
-
-    while (true) {
-        await checkHome(axiosInstance, accountIndex);
-
-        // Generate a random delay between 10 and 30 seconds
-        const waitTime = randomDelay(10, 30);
-        await logToFile(accountIndex, `✅ Account ${accountIndex + 1}: Cycle complete, waiting ${waitTime / 1000} seconds...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-    }
-}
-
-// Start bot for all accounts
-async function start() {
-    const tokens = await readLines('token.txt');
-    const proxies = await readLines('proxy.txt');
-
-    if (tokens.length === 0) {
-        console.error('❌ No tokens found in token.txt. Exiting...');
+    if (tokens.length !== proxies.length) {
+        console.error('❌ Mismatch: Number of tokens and proxies must be the same!');
         process.exit(1);
     }
 
-    if (proxies.length < tokens.length) {
-        console.error(`⚠️ Not enough proxies! Only ${proxies.length} proxies for ${tokens.length} tokens. Extra tokens will NOT be used.`);
+    return tokens.map((token, index) => ({
+        token,
+        proxy: proxies[index],
+        userAgent: new UserAgent().toString() // Assign a fixed User-Agent per token
+    }));
+}
+
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+const randomDelay = () => delay(Math.floor(Math.random() * (30000 - 10000 + 1)) + 10000);
+
+const banner = `\n=====================================\n  Hi Pin Auto Bot - LeviRekt \n=====================================\n`;
+
+async function checkHome(account) {
+    try {
+        const res = await axios.get(`${BASE_URL}/home`, {
+            headers: {
+                'accept': 'application/json',
+                'authorization': `Bearer ${account.token}`,
+                'User-Agent': account.userAgent
+            },
+            httpsAgent: new HttpsProxyAgent(`http://${account.proxy}`)
+        });
+        console.log(`👤 Account (Proxy: ${account.proxy}): ${res.data.user_info?.name || 'N/A'}`);
+    } catch (e) {
+        console.error(`🏠 Home: Failed for ${account.proxy} - ${e.message}`);
     }
+}
 
-    console.log(`🔑 Loaded ${tokens.length} tokens`);
-    console.log(`🌐 Loaded ${proxies.length} proxies`);
+async function getRandomTasks(account) {
+    try {
+        const res = await axios.get(`${BASE_URL}/task/random_task_list`, {
+            headers: {
+                'accept': 'application/json',
+                'authorization': `Bearer ${account.token}`,
+                'User-Agent': account.userAgent
+            },
+            httpsAgent: new HttpsProxyAgent(`http://${account.proxy}`)
+        });
+        console.log(`📋 Tasks fetched for ${account.proxy}`);
+        return res.data;
+    } catch (e) {
+        console.error(`📋 Tasks: Failed for ${account.proxy}`);
+        return null;
+    }
+}
 
-    // Assign proxies to accounts (ensuring each token has a dedicated proxy)
-    tokens.slice(0, proxies.length).forEach((token, index) => {
-        runAccount(index, token, proxies[index]);
+async function claimTask(account, taskId) {
+    try {
+        await axios.post(`${BASE_URL}/task/${taskId}/claim`, {}, {
+            headers: {
+                'accept': 'application/json',
+                'authorization': `Bearer ${account.token}`,
+                'User-Agent': account.userAgent
+            },
+            httpsAgent: new HttpsProxyAgent(`http://${account.proxy}`)
+        });
+        console.log(`✅ Task ${taskId} claimed for ${account.proxy}`);
+    } catch (e) {
+        console.error(`❌ Task ${taskId} failed for ${account.proxy}`);
+    }
+}
+
+async function runBot(account) {
+    console.log(banner);
+    while (true) {
+        console.log(`\n🚀 Starting new cycle for ${account.proxy}...`);
+        await checkHome(account);
+        console.log('');
+        
+        const tasks = await getRandomTasks(account);
+        if (tasks?.data?.length) {
+            for (const task of tasks.data) {
+                if (task.id) {
+                    await claimTask(account, task.id);
+                    await randomDelay();
+                }
+            }
+        } else {
+            console.log(`📋 No tasks available for ${account.proxy}`);
+        }
+        
+        console.log(`✅ Cycle complete for ${account.proxy}! Waiting before next cycle...`);
+        await randomDelay();
+    }
+}
+
+async function start() {
+    const accounts = await loadAccounts();
+    accounts.forEach(account => {
+        runBot(account).catch(e => {
+            console.error(`💥 Bot crashed for ${account.proxy}:`, e.message);
+        });
     });
 }
 
-// Global error handling
-process.on('unhandledRejection', async (e) => {
-    await logToFile(-1, `⚠️ Unhandled Rejection: ${e.message}`);
-});
-process.on('uncaughtException', async (e) => {
-    await logToFile(-1, `⚠️ Uncaught Exception: ${e.message}`);
-});
+process.on('unhandledRejection', (e) => console.error('⚠️ Unhandled Rejection:', e.message));
+process.on('uncaughtException', (e) => console.error('⚠️ Uncaught Exception:', e.message));
 
 start();
