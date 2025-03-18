@@ -1,6 +1,6 @@
 const axios = require('axios');
 const fs = require('fs').promises;
-const HttpsProxyAgent = require('https-proxy-agent');
+const { HttpsProxyAgent } = require('https-proxy-agent');
 const UserAgent = require('user-agents');
 
 const BASE_URL = 'https://prod-api.pinai.tech';
