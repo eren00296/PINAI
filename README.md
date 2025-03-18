@@ -3,7 +3,7 @@
  1. Clone the repository:
  ```bash
  git clone https://github.com/eren00296/PINAI.git
- cd HiPin-Auto-Bot
+ cd PINAI
  ```
  
  2. Install dependencies:
