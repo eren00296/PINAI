@@ -16,26 +16,23 @@ async function readLines(filename) {
     }
 }
 
-// Create log file per account
+// Log to file and console
 async function logToFile(accountIndex, message) {
     const logDir = 'logs';
-    await fs.mkdir(logDir, { recursive: true }); // Ensure log directory exists
+    await fs.mkdir(logDir, { recursive: true });
 
     const logFile = path.join(logDir, `account_${accountIndex + 1}.log`);
     const timestamp = new Date().toISOString();
     const logMessage = `[${timestamp}] ${message}\n`;
 
-    // Write to file
     await fs.appendFile(logFile, logMessage);
-
-    // Also print to console
     console.log(logMessage.trim());
 }
 
-// Generate random delay between min and max seconds
+// Random delay between min and max seconds
 const randomDelay = (min, max) => Math.floor(Math.random() * (max - min + 1) + min) * 1000;
 
-// Create axios instance for an account
+// Create axios instance with proxy
 async function createAxiosInstance(token, proxy, accountIndex) {
     let axiosConfig = {
         headers: {
@@ -52,12 +49,13 @@ async function createAxiosInstance(token, proxy, accountIndex) {
         axiosConfig.httpsAgent = new HttpsProxyAgent(proxy);
     } else {
         await logToFile(accountIndex, `⚠️ No proxy assigned for Account ${accountIndex + 1}, skipping...`);
-        return null; // Don't run this account
+        return null;
     }
 
     return axios.create(axiosConfig);
 }
 
+// Fetch account details
 async function checkHome(axiosInstance, accountIndex) {
     try {
         const res = await axiosInstance.get(`${BASE_URL}/home`);
@@ -72,15 +70,16 @@ async function checkHome(axiosInstance, accountIndex) {
         `;
         await logToFile(accountIndex, logMessage);
     } catch (e) {
-        await logToFile(accountIndex, `❌ Account ${accountIndex + 1}: Failed to fetch profile info`);
+        await logToFile(accountIndex, `❌ Account ${accountIndex + 1}: Failed to fetch profile info - ${e.message}`);
     }
 }
 
+// Run bot for an account
 async function runAccount(accountIndex, token, proxy) {
     await logToFile(accountIndex, `🚀 Starting bot for Account ${accountIndex + 1}`);
 
     const axiosInstance = await createAxiosInstance(token, proxy, accountIndex);
-    if (!axiosInstance) return; // Skip if no proxy assigned
+    if (!axiosInstance) return;
 
     while (true) {
         await checkHome(axiosInstance, accountIndex);
@@ -92,6 +91,7 @@ async function runAccount(accountIndex, token, proxy) {
     }
 }
 
+// Start bot for all accounts
 async function start() {
     const tokens = await readLines('token.txt');
     const proxies = await readLines('proxy.txt');
@@ -108,12 +108,13 @@ async function start() {
     console.log(`🔑 Loaded ${tokens.length} tokens`);
     console.log(`🌐 Loaded ${proxies.length} proxies`);
 
-    // Run only as many accounts as there are proxies
+    // Assign proxies to accounts (ensuring each token has a dedicated proxy)
     tokens.slice(0, proxies.length).forEach((token, index) => {
-        runAccount(index, token, proxies[index]); // Assign matching proxy
+        runAccount(index, token, proxies[index]);
     });
 }
 
+// Global error handling
 process.on('unhandledRejection', async (e) => {
     await logToFile(-1, `⚠️ Unhandled Rejection: ${e.message}`);
 });
