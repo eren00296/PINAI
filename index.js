@@ -1,6 +1,6 @@
 const axios = require('axios');
 const fs = require('fs').promises;
-const { HttpsProxyAgent } = require('https-proxy-agent'); // Ensure correct import
+const { HttpsProxyAgent } = require('https-proxy-agent');
 const UserAgent = require('user-agents');
 
 const BASE_URL = 'https://prod-api.pinai.tech';
@@ -25,18 +25,17 @@ async function loadAccounts() {
     }
 
     return tokens.map((token, index) => {
-        let proxy = proxies[index];
-
-        // Ensure proxy format is correct
-        if (!proxy.startsWith('http://') && !proxy.startsWith('https://')) {
-            proxy = `http://${proxy}`;
-        }
+        const proxy = proxies[index];
+        const [protocol, authHost] = proxy.split('://');
+        const [auth, host] = authHost.split('@');
+        const agent = new HttpsProxyAgent(`${protocol}://${host}`);
 
         return {
             token,
             proxy,
             userAgent: new UserAgent().toString(),
-            agent: new HttpsProxyAgent(proxy) // Fixed constructor usage
+            agent,
+            authHeader: 'Basic ' + Buffer.from(auth).toString('base64')
         };
     });
 }
@@ -74,10 +73,12 @@ async function getRandomTasks(account) {
             httpsAgent: account.agent,
             proxy: false
         });
-        console.log(`📋 Tasks fetched for ${account.proxy}`);
+
+        console.log(`📋 Full API Response (${account.proxy}):`, JSON.stringify(res.data, null, 2));
+
         return res.data;
     } catch (e) {
-        console.error(`📋 Tasks: Failed for ${account.proxy}`);
+        console.error(`📋 Tasks: Failed for ${account.proxy} - ${e.message}`);
         return null;
     }
 }
