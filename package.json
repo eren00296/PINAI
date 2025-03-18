@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/airdropinsiders/HiPin-Auto-Bot.git"
+    "url": "git+https://github.com/eren00296/PINAI.git"
   },
   "keywords": [
     "hipin",
@@ -18,12 +18,12 @@
     "airdrop",
     "crypto"
   ],
-  "author": "AirdropInsiders",
+  "author": "LeviRekt",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/airdropinsiders/HiPin-Auto-Bot/issues"
+    "url": "https://github.com/eren00296/PINAI/issues"
   },
-  "homepage": "https://github.com/airdropinsiders/HiPin-Auto-Bot#readme",
+  "homepage": "https://github.com/eren00296/PINAI#readme",
   "dependencies": {
     "axios": "^1.6.2",
     "https-proxy-agent": "^7.0.0",
