@@ -10,12 +10,9 @@
  ```bash
  npm install
  ```
- 
- 3. Create a `token.txt` file in the root directory and add your HiPin authentication token:
- ```bash
- echo "YOUR_TOKEN_HERE" > token.txt
- ```
- 
+3. Add proxy in proxy.txt
+4. Add token in token.txt
+   
  ## 🔧 Usage
  
  Run the bot:
