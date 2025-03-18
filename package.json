@@ -1,32 +1,32 @@
 {
-  "name": "hipin-auto-bot",
-  "version": "1.1.0",
-  "description": "Automated bot for HiPin platform tasks and resource collection",
-  "main": "index.js",
-  "scripts": {
-    "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/eren00296/PINAI.git"
-  },
-  "keywords": [
-    "hipin",
-    "bot",
-    "automation",
-    "airdrop",
-    "crypto"
-  ],
-  "author": "LeviRekt",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/eren00296/PINAI/issues"
-  },
-  "homepage": "https://github.com/eren00296/PINAI#readme",
-  "dependencies": {
-    "axios": "^1.6.2",
-    "https-proxy-agent": "^7.0.0",
-    "fs-extra": "^11.2.0"
-  }
+    "name": "hipin-auto-bot",
+    "version": "1.0.1",
+    "description": "Automated bot for HiPin platform tasks and resource collection",
+    "main": "index.js",
+    "scripts": {
+      "start": "node index.js",
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/eren00296/PINAI"
+    },
+    "keywords": [
+      "hipin",
+      "bot",
+      "automation",
+      "airdrop",
+      "crypto"
+    ],
+    "author": "AirdropInsiders",
+    "license": "MIT",
+    "bugs": {
+      "url": "https://github.com/eren00296/PINAI/issues"
+    },
+    "homepage": "https://github.com/eren00296/PINAI#readme",
+    "dependencies": {
+      "axios": "^1.6.2",
+      "https-proxy-agent": "^7.0.0",
+      "user-agents": "^1.0.0"
+    }
 }
