@@ -1,6 +1,6 @@
 const axios = require('axios');
 const fs = require('fs').promises;
-const { HttpsProxyAgent } = require('https-proxy-agent');
+const HttpsProxyAgent = require('https-proxy-agent');
 const UserAgent = require('user-agents');
 
 const BASE_URL = 'https://prod-api.pinai.tech';
@@ -24,11 +24,21 @@ async function loadAccounts() {
         process.exit(1);
     }
 
-    return tokens.map((token, index) => ({
-        token,
-        proxy: proxies[index],
-        userAgent: new UserAgent().toString() // Assign a fixed User-Agent per token
-    }));
+    return tokens.map((token, index) => {
+        let proxy = proxies[index];
+
+        // Ensure proxy format is correct
+        if (!proxy.startsWith('http://') && !proxy.startsWith('https://')) {
+            proxy = `http://${proxy}`;
+        }
+
+        return {
+            token,
+            proxy,
+            userAgent: new UserAgent().toString(), // Assign a fixed User-Agent per token
+            agent: new HttpsProxyAgent(proxy) // Fixed proxy agent
+        };
+    });
 }
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -44,7 +54,8 @@ async function checkHome(account) {
                 'authorization': `Bearer ${account.token}`,
                 'User-Agent': account.userAgent
             },
-            httpsAgent: new HttpsProxyAgent(`http://${account.proxy}`)
+            httpsAgent: account.agent,
+            proxy: false // Disable Axios default proxy handling
         });
         console.log(`👤 Account (Proxy: ${account.proxy}): ${res.data.user_info?.name || 'N/A'}`);
     } catch (e) {
@@ -60,7 +71,8 @@ async function getRandomTasks(account) {
                 'authorization': `Bearer ${account.token}`,
                 'User-Agent': account.userAgent
             },
-            httpsAgent: new HttpsProxyAgent(`http://${account.proxy}`)
+            httpsAgent: account.agent,
+            proxy: false
         });
         console.log(`📋 Tasks fetched for ${account.proxy}`);
         return res.data;
@@ -78,7 +90,8 @@ async function claimTask(account, taskId) {
                 'authorization': `Bearer ${account.token}`,
                 'User-Agent': account.userAgent
             },
-            httpsAgent: new HttpsProxyAgent(`http://${account.proxy}`)
+            httpsAgent: account.agent,
+            proxy: false
         });
         console.log(`✅ Task ${taskId} claimed for ${account.proxy}`);
     } catch (e) {
