@@ -1,6 +1,6 @@
 const axios = require('axios');
 const fs = require('fs').promises;
-const HttpsProxyAgent = require('https-proxy-agent');
+const { HttpsProxyAgent } = require('https-proxy-agent'); // Ensure correct import
 const UserAgent = require('user-agents');
 
 const BASE_URL = 'https://prod-api.pinai.tech';
@@ -35,8 +35,8 @@ async function loadAccounts() {
         return {
             token,
             proxy,
-            userAgent: new UserAgent().toString(), // Assign a fixed User-Agent per token
-            agent: new HttpsProxyAgent(proxy) // Fixed proxy agent
+            userAgent: new UserAgent().toString(),
+            agent: new HttpsProxyAgent(proxy) // Fixed constructor usage
         };
     });
 }
@@ -55,7 +55,7 @@ async function checkHome(account) {
                 'User-Agent': account.userAgent
             },
             httpsAgent: account.agent,
-            proxy: false // Disable Axios default proxy handling
+            proxy: false
         });
         console.log(`👤 Account (Proxy: ${account.proxy}): ${res.data.user_info?.name || 'N/A'}`);
     } catch (e) {
